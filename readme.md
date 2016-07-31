@@ -3,7 +3,7 @@ Underwire v0.0.1
 
 A minimal dependency graph manager and viewer built with Hapi and React.
 
-[[https://github.com/underwire/underwire/blob/master/docs/screenshots/graph.png|alt=Graph View]]
+![Graph View](https://github.com/underwire/underwire/blob/master/docs/screenshots/graph.png)
 
 What?
 ---

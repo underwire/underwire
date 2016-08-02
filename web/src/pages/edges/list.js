@@ -15,10 +15,12 @@ module.exports = builder({
   headers: [
       'From',
       'To',
+      'Tags',
     ],
   rowmap: [
       (row)=>lookupNode(row.from).name,
       (row)=>lookupNode(row.to).name,
+      (row)=>(row.tags||[]).map(properCase).join(', '),
     ],
   actions:{
       View: '/edges/${id}',

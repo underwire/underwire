@@ -138,7 +138,18 @@ class SmartForm extends React.Component{
 
   handleSubmit(e){
     e&&e.preventDefault();
-    const data = this.getFormData();
+    const data = (()=>{
+      try{
+        return this.getFormData();
+      }catch(e){
+        const err = e.toString();
+        this.setState({errors: [err]});
+        return e;
+      }
+    })();
+    if(data instanceof Error){
+      return;
+    }
     const {
       id = false,
     } = data;

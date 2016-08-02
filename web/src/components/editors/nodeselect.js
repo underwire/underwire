@@ -10,12 +10,13 @@ const Select = require('react-select');
 class NodeSelect extends Component{
   constructor(props){
     super();
-    this.state = {value: props.selected};
+    this.state = {value: props.value};
   }
 
   handleSelect(item){
-    this.setState({value: item.value});
-    item && this.props.onSelected && this.props.onSelected(item.value);
+    const value = (item && item.value) || undefined;
+    this.setState({value});
+    this.props.onSelected && this.props.onSelected(value);
   }
 
   getValue(){
@@ -23,8 +24,8 @@ class NodeSelect extends Component{
   }
 
   componentWillReceiveProps(props){
-    if(props.selected){
-      this.setState({value: props.selected});
+    if(props.value){
+      this.setState({value: props.value});
     }
   }
 
@@ -32,7 +33,7 @@ class NodeSelect extends Component{
     const {
       nodes,
     } = this.props;
-    const selected = this.state.value;//this.props.selected || (nodes[0]||{}).id;
+    const value = this.state.value;//this.props.selected || (nodes[0]||{}).id;
     const items = nodes.map((node)=>{
       return {
         value: node.id,
@@ -40,34 +41,14 @@ class NodeSelect extends Component{
       };
     });
     return (
-      <Select ref="editor" options={items} value={selected} onChange={this.handleSelect.bind(this)} />
-    );
-  }
-};
-
-class NodeSelect_old extends Component{
-  handleSelect(e){
-    const id = e.target.value;
-    id && this.props.onSelected && this.props.onSelected(id, e);
-  }
-
-  render(){
-    const {
-      nodes,
-    } = this.props;
-    const selected = this.props.selected || (nodes[0]||{}).id;
-    const items = nodes.map((node)=><option value={node.id} key={node.id}>{node.name}</option>);
-    return (
-      <select className="form-control" value={selected} onChange={this.handleSelect.bind(this)}>
-        {items}
-      </select>
+      <Select ref="editor" options={items} value={value} onChange={this.handleSelect.bind(this)} />
     );
   }
 };
 
 const mapStateToProps = (state, ownProps) => {
   return {
-    selected: ownProps.selected,
+    value: ownProps.value,
     onSelected: ownProps.onSelected,
     nodes: state.nodes,
   };

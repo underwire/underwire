@@ -44,17 +44,30 @@ class EditNode extends Component{
         items: shapes,
         default: 'Process',
       },
+      {
+        caption: 'Tags:',
+        field: 'tags',
+        type: 'labeledtags',
+        placeholder: 'Separate tags with ,'
+      },
+      {
+        caption: 'Meta:',
+        field: 'meta',
+        type: 'labeledjsoneditor',
+      },
     ];
     return (
-      <SmartForm
-        fields={fields}
-        data={user}
-        title={`${action} Node`}
-        ref="form"
-        onUpdate={(data, callback)=>this.props.onSave(data, callback)}
-        onInsert={(data, callback)=>this.props.onRegister(data, callback)}
-        onSuccess={()=>this.context.router.push('/nodes')}
-        />
+      <div className="container">
+        <SmartForm
+          fields={fields}
+          data={user}
+          title={`${action} Node`}
+          ref="form"
+          onUpdate={(data, callback)=>this.props.onSave(data, callback)}
+          onInsert={(data, callback)=>this.props.onRegister(data, callback)}
+          onSuccess={()=>this.context.router.push('/nodes')}
+          />
+      </div>
     );
   }
 

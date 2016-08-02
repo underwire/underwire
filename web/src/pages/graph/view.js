@@ -19,11 +19,24 @@ class ViewGraph extends React.Component{
     return this.handleSelect(node.id);
   }
 
+  getGraphView(){
+    if(!this.state.rootNodeId){
+      return (
+        <div className="bs-callout bs-callout-info">
+          <h4>NONE SELECTED:</h4>
+          <p>Select a node to view its graph.</p>
+        </div>
+      );
+    }
+    return <DependencyGraphView selected={this.state.rootNodeId} focusRoot={true} onDoubleClick={this.drillDown.bind(this)} />;
+  }
+
   render(){
+    const graph = this.getGraphView();
     return (
       <div className="container">
         <NodeSelect selected={this.state.rootNodeId} onSelected={this.handleSelect.bind(this)} />
-        <DependencyGraphView selected={this.state.rootNodeId} focusRoot={true} onDoubleClick={this.drillDown.bind(this)} />
+        {graph}
       </div>
     );
   }

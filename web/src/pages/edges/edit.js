@@ -41,35 +41,32 @@ class EditEdge extends Component{
       {
         caption: 'From:',
         field: 'from',
-        //type: 'select',
-        //items: nodes,
-        type: 'custom',
-        render: (ref, key, value)=>{
-          return <NodeSelect ref={ref} key={key} selected={value} />;
-          //return <TokenEditor ref={ref} key={key} value={values} />
-        },
-        getValue: (ref)=>{
-          console.log('Value: ', ref.getWrappedInstance().getValue());
-          return ref.getWrappedInstance().getValue();
-        }
+        type: 'labelednodeselect',
       },
       {
         caption: 'To:',
         field: 'to',
-        type: 'select',
-        items: nodes,
+        type: 'labelednodeselect',
+      },
+      {
+        caption: 'Tags:',
+        field: 'tags',
+        type: 'labeledtags',
+        placeholder: 'Separate tags with ,'
       },
     ];
     return (
-      <SmartForm
-        fields={fields}
-        data={user}
-        title={`${action} Edge`}
-        ref="form"
-        onUpdate={(data, callback)=>this.props.onSave(data, callback)}
-        onInsert={(data, callback)=>this.props.onRegister(data, callback)}
-        onSuccess={()=>this.context.router.push('/edges')}
-        />
+      <div className="container">
+        <SmartForm
+          fields={fields}
+          data={user}
+          title={`${action} Edge`}
+          ref="form"
+          onUpdate={(data, callback)=>this.props.onSave(data, callback)}
+          onInsert={(data, callback)=>this.props.onRegister(data, callback)}
+          onSuccess={()=>this.context.router.push('/edges')}
+          />
+      </div>
     );
   }
 

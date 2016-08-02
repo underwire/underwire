@@ -8,10 +8,12 @@ module.exports = builder({
   headers: [
       'Name',
       'Type',
+      'Tags',
     ],
   rowmap: [
       (row)=>row.name,
       (row)=>properCase(row.shape || 'process'),
+      (row)=>(row.tags||[]).map(properCase).join(', '),
     ],
   actions:{
       View: '/nodes/${id}',

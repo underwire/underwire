@@ -3,7 +3,7 @@ Underwire v0.0.1
 
 A minimal dependency graph manager and viewer built with Hapi and React.
 
-![Graph View](https://github.com/underwire/underwire/blob/master/docs/screenshots/graph.png)
+![Graph View](https://raw.githubusercontent.com/underwire/underwire/master/docs/screenshots/graph.png)
 
 What?
 ---
@@ -72,3 +72,8 @@ npm run dev
 http://localhost:8080/
 
 Make changes, see them on your screen.
+
+API
+---
+
+To view the API documentation; install Underwire, start the application and then navigate to http://localhost:8080/documentation

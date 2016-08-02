@@ -1,9 +1,14 @@
 @import "bootstrap/less/bootstrap";
 @import "variables";
 @import "bootswatch";
+@import "codemirror";
 @import "../../../node_modules/react-select/dist/react-select.css";
-//@import "../../../node_modules/react-select/less/default.less";
+
 body {
+}
+
+a{
+  font-weight: bold;
 }
 
 .page-container {
@@ -17,6 +22,16 @@ body {
   canvas{
     background: white;
     border: 1px solid black;
+  }
+}
+
+.form-errors{
+  font-weight: bold;
+  color: white;
+
+  p{
+    margin: 0 1em;
+    line-height: 2em;
   }
 }
 

@@ -42,9 +42,10 @@ module.exports = React.createClass({
           </Navbar.Brand>
         </Navbar.Header>
         <Nav>
-          <NavLink to="/graph">Graph</NavLink>
           <NavLink to="/nodes">Nodes</NavLink>
           <NavLink to="/edges">Edges</NavLink>
+          <NavLink to="/graph">Graph</NavLink>
+          <NavLink to="/reports">Reports</NavLink>
           <NavLink to="/about">About</NavLink>
           <RemoteLink to="https://github.com/underwire/underwire">Github</RemoteLink>
         </Nav>

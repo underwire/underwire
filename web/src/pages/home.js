@@ -68,7 +68,7 @@ class Home extends React.Component{
           <div className="col-lg-4">
             <h2>Todo</h2>
             <ul>
-              <li>Better node type selection</li>
+              <li>Better node shape selection</li>
               <li>Ability to edit edges from nodes</li>
               <li>Bug fixes on wordwarp in graph view</li>
               <li>Tests</li>

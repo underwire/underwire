@@ -8,11 +8,15 @@ const Select = require('./select');
 const LabeledSelect = require('./labeledselect');
 const LabeledCheckbox = require('./labeledcheckbox');
 const Checkbox = require('./checkbox');
-const TeamsSelector = require('./custom/teamsselector');
-const CredSelector = require('./custom/credselector');
-const CodeReposSelector = require('./custom/codereposselector');
-const SupportLinksList = require('./custom/supportlinkslist');
-const RecipeSteps = require('./custom/recipesteps');
+
+const NodeSelect = require('./nodeselect');
+const LabeledNodeSelect = require('./labelednodeselect');
+
+const Tags = require('./tags');
+const LabeledTags = require('./labeledtags');
+
+const LabeledCodeEditor = require('./labeledcodeeditor');
+const LabeledJSONEditor = require('./labeledjsoneditor');
 
 Editors.register({
   type: 'checkbox',
@@ -79,62 +83,64 @@ Editors.register({
 });
 
 Editors.register({
-  type: 'teams',
+  type: 'nodeselect',
   render(options){
     const {
       caption,
       field,
       ...other
     } = options;
-    return <TeamsSelector label={caption || `${field}:`} {...other} />
-  },
-});
-
-Editors.register({
-  type: 'credentials',
-  render(options){
-    const {
-      caption,
-      field,
-      ...other
-    } = options;
-    return <CredSelector label={caption || `${field}:`} {...other} />
-  },
-});
-
-Editors.register({
-  type: 'coderepos',
-  render(options){
-    const {
-      caption,
-      field,
-      ...other
-    } = options;
-    return <CodeReposSelector label={caption || `${field}:`} {...other} />
-  },
-});
-
-Editors.register({
-  type: 'supportLinksList',
-  render(options){
-    const {
-      caption,
-      field,
-      ...other
-    } = options;
-    return <SupportLinksList label={caption || `${field}:`} {...other} />
+    return <NodeSelect label={caption || `${field}:`} {...other} />
   }
 });
 
 Editors.register({
-  type: 'recipesteps',
+  type: 'labelednodeselect',
   render(options){
     const {
       caption,
       field,
       ...other
     } = options;
-    return <RecipeSteps label={caption || `${field}:`} {...other} />
+    return <LabeledNodeSelect label={caption || `${field}:`} {...other} />
+  }
+});
+
+Editors.register({
+  type: 'tags',
+  render(options){
+    const {
+      caption,
+      field,
+      ...other
+    } = options;
+    return <Tags label={caption || `${field}:`} {...other} />
+  }
+});
+
+Editors.register({
+  type: 'labeledtags',
+  render(options){
+    const {
+      caption,
+      field,
+      ...other
+    } = options;
+    return <LabeledTags label={caption || `${field}:`} {...other} />
+  }
+});
+
+Editors.register({
+  type: 'labeledcodeeditor',
+  render(options){
+    return <LabeledCodeEditor {...options} />;
+  }
+});
+
+Editors.register({
+  type: 'labeledjsoneditor',
+  render(options){
+    return <LabeledJSONEditor {...options} />;
   }
 });
 
@@ -146,9 +152,6 @@ module.exports = {
   LabeledSelect,
   LabeledCheckbox,
   Checkbox,
-  TeamsSelector,
-  CredSelector,
-  CodeReposSelector,
-  SupportLinksList,
-  NodeSelect: require('./nodeselect'),
+  LabeledNodeSelect,
+  NodeSelect,
 };

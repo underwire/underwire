@@ -16,6 +16,7 @@ const Graph = require('../pages/graph');
 const Nodes = require('../pages/nodes');
 const Edges = require('../pages/edges');
 const About = require('../pages/about');
+const Reports = require('../pages/reports');
 
 const PageNotFound = require('../pages/notfound');
 
@@ -54,6 +55,8 @@ module.exports = React.createClass({
             <Route path="/edges/new" component={Edges.Create} />
             <Route path="/edges/:id" component={Edges.View} />
             <Route path="/edges/:id/edit" component={Edges.Edit} />
+            <Route path="/reports" component={Reports.Listing} />
+            <Route path="/reports/dependencies/overview" component={Reports.DependencyOverview} />
             <Route path="/about" component={About} />
             <Route path="*" component={PageNotFound} />
           </Route>

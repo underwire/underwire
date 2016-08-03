@@ -1,4 +1,4 @@
-Underwire v0.0.2
+Underwire v0.0.3
 ===
 
 A minimal dependency graph manager and viewer built with Hapi and React.

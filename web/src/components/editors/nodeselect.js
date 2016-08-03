@@ -33,11 +33,12 @@ class NodeSelect extends Component{
     const {
       nodes,
     } = this.props;
-    const value = this.state.value;//this.props.selected || (nodes[0]||{}).id;
+    const value = this.state.value;
     const items = nodes.map((node)=>{
+      const caption = node.version?`${node.name} (v${node.version})`:node.name;
       return {
         value: node.id,
-        label: node.name,
+        label: caption,
       };
     });
     return (

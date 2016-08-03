@@ -35,7 +35,7 @@ class ViewGraph extends React.Component{
     const graph = this.getGraphView();
     return (
       <div className="container">
-        <NodeSelect selected={this.state.rootNodeId} onSelected={this.handleSelect.bind(this)} />
+        <NodeSelect value={this.state.rootNodeId} onSelected={this.handleSelect.bind(this)} />
         {graph}
       </div>
     );

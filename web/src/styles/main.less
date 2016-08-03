@@ -4,6 +4,29 @@
 @import "codemirror";
 @import "../../../node_modules/react-select/dist/react-select.css";
 
+.list-group.typeahead{
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1;
+  border-radius: 4px;
+
+  .list-group-item{
+    background-color: white;
+    color: @input-color;
+    font-weight: normal;
+
+    &:last-child{
+    }
+
+    &:hover,
+    &.active {
+      background-color: @table-bg;
+      color: #fff;
+      border: none;
+    }
+  }
+}
+
 body {
 }
 

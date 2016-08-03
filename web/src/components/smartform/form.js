@@ -96,7 +96,7 @@ class SmartForm extends React.Component{
     const {
       id = false
     } = this.props.data || {};
-    return (fields||this.props.fields).reduce((obj, info)=>{
+    return Object.assign((fields||this.props.fields).reduce((obj, info)=>{
       const {
         field,
         type,
@@ -121,7 +121,7 @@ class SmartForm extends React.Component{
       }
       const value = store?store(rawValue):rawValue;
       return setObjectValue(obj, as||field, value);
-    }, {id});
+    }, {id}), this.props.hidden||{});
   }
 
   handleDone(err, response){

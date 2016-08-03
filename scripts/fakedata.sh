@@ -23,14 +23,22 @@ curl -X POST \
 
   curl -X POST \
     -H "Content-Type: application/json" \
+    http://localhost:8080/api/graph/aliases \
+    --data '{
+      "definition": "Test 1",
+      "nodes": ["Item 1"]
+    }'
+
+  curl -X POST \
+    -H "Content-Type: application/json" \
     http://localhost:8080/api/graph/edges \
     --data '[
       {
-        "from": "Item 1",
+        "from": "Test 1",
         "to": "Item 2"
       },
       {
-        "from": "Item 1",
+        "from": "Test 1",
         "to": "Item 4"
       },
       {

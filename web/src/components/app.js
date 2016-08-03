@@ -49,6 +49,7 @@ module.exports = React.createClass({
             <Route path="/graph" component={Graph.View} />
             <Route path="/nodes" component={Nodes.List} />
             <Route path="/nodes/new" component={Nodes.Create} />
+            <Route path="/nodes/new/:derivation" component={Nodes.Create} />
             <Route path="/nodes/:id" component={Nodes.View} />
             <Route path="/nodes/:id/edit" component={Nodes.Edit} />
             <Route path="/edges" component={Edges.List} />

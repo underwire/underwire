@@ -20,8 +20,6 @@ class Tags extends Component{
   }
 
   handleClick(e){
-    //console.log(e);
-    //e.preventDefault();
     this.addTag(e.target.innerHTML);
     return this.refs.editor.focus();
   }
@@ -38,6 +36,20 @@ class Tags extends Component{
     this.setState({selected: false, index: 0});
   }
 
+  scrollIntoView(idx){
+    const elem = this.items[idx];
+    if(!elem){
+      return;
+    }
+    const node = this.refs[elem.key];
+    const panel = this.refs.searchResults;
+
+    if (panel && node &&
+      (node.offsetTop > panel.scrollTop + panel.offsetHeight || node.offsetTop < panel.scrollTop)) {
+      panel.scrollTop = node.offsetTop - panel.offsetTop;
+    }
+  }
+
   selectItem(e){
     if(this.state.selected){
       return;
@@ -46,11 +58,13 @@ class Tags extends Component{
     // Down arrow key pressed
     if(e.keyCode === 40 && this.state.index < this.items.length -1){
       this.setState({index: ++this.state.index});
+      this.scrollIntoView(this.state.index);
       return e.preventDefault();
     }
     // Up arrow key pressed
     if(e.keyCode === 38 && this.state.index > 0){
       this.setState({index: --this.state.index});
+      this.scrollIntoView(this.state.index);
       return e.preventDefault();
     }
     // Enter pressed
@@ -100,12 +114,12 @@ class Tags extends Component{
         return false;
       }
       return itm.indexOf(val) > -1;
-    }).slice(0, 10).map((item, index)=>{
+    }).map((item, index)=>{
       const className = this.state.index === index?'list-group-item active':'list-group-item';
-      return <a key={item} className={className} onClick={this.handleClick.bind(this)}>{item}</a>;
+      return <a ref={item} key={item} className={className} onClick={this.handleClick.bind(this)}>{item}</a>;
     });
     const searchResults = val.trim().length && !this.state.selected?(
-      <div className="list-group typeahead">
+      <div ref="searchResults" className="list-group typeahead">
         {items}
       </div>
     ):<div className="list-group typeahead" />;

@@ -10,10 +10,12 @@ const linkData = (data)=>{
     const {
       id,
       name,
+      version,
       shape,
       ...meta
     } = node;
-    return Object.assign({id, name, shape, meta, node}, {
+    const caption = version?`${name}\nv${version}`:name;
+    return Object.assign({id, name: caption, version, shape, meta, node}, {
       inbound: [],
       outbound: [],
     });
@@ -40,13 +42,14 @@ const flattenTree = (node)=>{
           id: child.id,
           name: child.name,
           shape: child.shape,
+          version: child.version,
           node: child.node
         };
         return false;
       }
-      seen.push(child.id);
+      const hasSeen = seen.slice().concat(child.id);
       return Object.assign({}, child, {
-        [direction]: flattenBranch(child, direction, seen.slice())
+        [direction]: flattenBranch(child, direction, hasSeen)
       });
     }).filter((child)=>child!==false);
   };

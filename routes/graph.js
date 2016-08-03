@@ -3,6 +3,261 @@ const Joi = require('joi');
 const async = require('async');
 const io = require('../lib/io');
 
+const errorReply = (reply, err)=>{
+  if(err instanceof Error){
+    const result = {
+      root: 'error',
+      error: {
+        message: err.toString(),
+        stack: err.stack?err.stack.split('\n'):undefined,
+      }
+    };
+    return reply(result).code(400);
+  }
+  return reply(err).code(400);
+};
+
+const responseReply = (reply, err, response)=>{
+  if(err){
+    return errorReply(reply, err);
+  }
+  return reply(response);
+};
+
+const locateNodes = (criteria, callback)=>{
+  const buildFromCriteria = (criteria)=>{
+    if(Array.isArray(criteria)){
+      const initial = criteria.map(buildFromCriteria);
+      return initial.reduce((search, item)=>{
+        if(item.$or){
+          return {
+            $or: search.$or.concat(...item.$or),
+          };
+        }
+        return {
+          $or: search.$or.concat(item),
+        };
+      }, {$or: []});
+    }
+    if(typeof(criteria)==='string'){
+      return {$or: [{id: criteria}, {name: criteria}]};
+    }
+    if(criteria instanceof RegExp){
+      return {$or: [{id: criteria}, {name: criteria}]};
+    }
+    return criteria;
+  };
+
+  const searchForNode = (criteria)=>{
+    const fromCriteria = buildFromCriteria(criteria);
+    stores.collection('nodes', (err, nodes)=>{
+      if(err){
+        return callback(err);
+      }
+      nodes.find(fromCriteria, (err, list)=>{
+        if(err){
+          return callback(err);
+        }
+        const nodes = list[list.root];
+        if((!nodes)||(nodes.length===0)){
+          return callback(new Error(`Could not locate from node using ${criteria}`));
+        }
+        callback(null, list);
+      });
+    });
+  };
+
+  if(typeof(criteria)==='string'){
+    return findAliasedNodes(criteria, (err, nodes)=>{
+      if(err){
+        return callback(err);
+      }
+      if(nodes && nodes[nodes.root].length){
+        return callback(null, nodes);
+      }
+      return searchForNode(criteria);
+    });
+  }
+  return searchForNode(criteria);
+};
+
+const locateNode = (criteria, callback)=>{
+  return locateNodes(criteria, (err, list)=>{
+    if(err){
+      return callback(err);
+    }
+    const nodes = list[list.root];
+    if(nodes.length>1){
+      return callback(new Error(`Multiple from nodes located using ${criteria}`), list);
+    }
+    return callback(null, {
+      root: 'node',
+      node: nodes[0]
+    });
+  });
+};
+
+const prepareAlias = (raw, callback)=>{
+  let alias = {
+    definition: raw.definition,
+  };
+  if(raw.nodes){
+    alias.nodes = [];
+    return async.eachLimit(raw.nodes, 5, (def, next)=>{
+      locateNodes(def, (err, list)=>{
+        if(err){
+          return next(err);
+        }
+        alias.nodes = alias.nodes.concat(...(list[list.root].map((node)=>node.id)));
+        next();
+      });
+    }, (err)=>{
+      if(err){
+        return callback(err);
+      }
+      return callback(null, alias);
+    });
+  }
+  alias.edges = [];
+  return async.eachLimit(raw.edges, 5, (def, next)=>{
+    ensureEdge(def, (err, edge)=>{
+      if(err){
+        return next(err);
+      }
+      alias.edges = alias.edges.concat(edge[edge.root].map((edge)=>edge.id));
+      next();
+    });
+  }, (err)=>{
+    if(err){
+      return callback(err);
+    }
+    return callback(null, alias);
+  });
+};
+
+const insertAlias = (alias, callback)=>{
+  return prepareAlias(alias, (err, alias)=>{
+    if(err){
+      return callback(err);
+    }
+    stores.collection('aliases', (err, collection)=>{
+      if(err){
+        return callback(err);
+      }
+      collection.insert(alias, callback);
+    });
+  });
+};
+
+const updateAlias = (id, alias, callback)=>{
+  return prepareAlias(alias, (err, alias)=>{
+    if(err){
+      return callback(err);
+    }
+    stores.collection('aliases', (err, collection)=>{
+      if(err){
+        return callback(err);
+      }
+      collection.update(id, alias, callback);
+    });
+  });
+};
+
+const ensureAlias = (alias, callback)=>{
+  if(!alias.definition){
+    return callback(new Error(`To create an alias you must supply a definition.`));
+  }
+  if(!(Array.isArray(alias.edges)||Array.isArray(alias.nodes))){
+    return callback(new Error(`Alias ${alias.definition} has no nodes or edges assigned to it.`));
+  }
+  if(alias.edges && alias.nodes){
+    return callback(new Error(`Alias ${alias.definition} can only have nodes or edges.`));
+  }
+  stores.collection('aliases', (err, collection)=>{
+    if(err){
+      return callback(err);
+    }
+    collection.find({definition: alias.definition}, (err, response)=>{
+      if(err){
+        return callback(err);
+      }
+      const aliases = response[response.root];
+      if((!aliases) || (aliases.length === 0)){
+        return insertAlias(alias, callback);
+      }
+      return updateAlias(alias.id, alias, callback);
+    });
+  });
+};
+
+const getAliasByDefinition = (definition, callback)=>{
+  stores.collection('aliases', (err, collection)=>{
+    if(err){
+      return callback(err);
+    }
+    collection.find({definition}, (err, list)=>{
+      if(err){
+        return callback(err);
+      }
+      const alias = list[list.root][0];
+      return callback(null, {
+        root: 'alias',
+        alias
+      });
+    });
+  });
+};
+
+const findAliasedNodes = (definition, callback)=>{
+  getAliasByDefinition(definition, (err, resp)=>{
+    if(err){
+      return callback(err);
+    }
+    const alias = resp[resp.root];
+    if(!alias){
+      return callback(null, undefined);
+    }
+    stores.collection('nodes', (err, collection)=>{
+      if(err){
+        return callback(err);
+      }
+      collection.find({id: {$in: alias.nodes}}, (err, nodes)=>{
+        if(err){
+          return callback(err);
+        }
+        return callback(null, nodes);
+      });
+    });
+  });
+};
+
+const listAliases = (options, callback)=>{
+  stores.collection('aliases', (err, collection)=>{
+    if(err){
+      return callback(err);
+    }
+    collection.list(options, callback);
+  });
+};
+
+const deleteAlias = (id, callback)=>{
+  stores.collection('aliases', (err, collection)=>{
+    if(err){
+      return callback(err);
+    }
+    collection.delete(id, callback);
+  });
+};
+
+const getAliases = (like, options, callback)=>{
+  stores.collection('aliases', (err, collection)=>{
+    if(err){
+      return callback(err);
+    }
+    collection.find({definition: like}, callback);
+  });
+};
+
 const ensureEdge = (edge, callback)=>{
   const getRest = ()=>{
     const {
@@ -27,38 +282,23 @@ const ensureEdge = (edge, callback)=>{
       if(err){
         return callback(err);
       }
-
-      const fromCriteria = typeof(edge.from)==='string'?
-          {$or: [{id: edge.from}, {name: edge.from}]}:
-          edge.from;
-      const toCriteria = typeof(edge.to)==='string'?
-          {$or: [{id: edge.to}, {name: edge.to}]}:
-          edge.to;
-      nodes.find(fromCriteria, (err, fromList)=>{
+      locateNode(edge.from, (err, node)=>{
         if(err){
           return callback(err);
         }
-        const from = fromList[fromList.root];
-        if((!from)||(from.length===0)){
+        const from = node[node.root];
+        if(!from){
           return callback(new Error(`Could not locate from node using ${edge.from}`));
         }
-        if(from.length>1){
-          return callback(new Error(`Multiple from nodes located using ${edge.from}`));
-        }
-        nodes.find(toCriteria, (err, toList)=>{
+
+        locateNode(edge.to, (err, node)=>{
           if(err){
             return callback(err);
           }
-          const to = toList[toList.root];
-          if((!to)||(to.length===0)){
-            return callback(new Error(`Could not locate to node using ${edge.from}`));
-          }
-          if(from.length>1){
-            return callback(new Error(`Multiple to nodes located using ${edge.from}`));
-          }
+          const to = node[node.root];
           return callback(null, Object.assign({}, edge, {
-              from: from[0].id,
-              to: to[0].id,
+              from: from.id,
+              to: to.id,
               ...getRest()
             }));
         });
@@ -104,7 +344,7 @@ const upsertEdge = (edge, callback)=>{
 const insertEdges = (edges, callback)=>{
   stores.collection('edges', (err, collection)=>{
     if(err){
-      return reply(err);
+      return callback(err);
     }
     let inserted = [];
     let errors = [];
@@ -135,9 +375,27 @@ const insertEdges = (edges, callback)=>{
 const updateNode = (id, node, callback)=>{
   stores.collection('nodes', (err, collection)=>{
     if(err){
-      return reply(err);
+      return callback(err);
     }
     collection.update(id, node, callback);
+  });
+};
+
+const findNamedNode = (node, callback)=>{
+  stores.collection('nodes', (err, collection)=>{
+    if(err){
+      return callback(err);
+    }
+    const {
+      name,
+      version,
+    } = node;
+    collection.find({name, version}, (err, response)=>{
+      if(err){
+        return callback(err);
+      }
+      return callback(null, (response[response.root]||[])[0]);
+    });
   });
 };
 
@@ -146,30 +404,41 @@ const insertNode = (node, callback)=>{
     if(err){
       return callback(err);
     }
-    collection.insert(node, (err, res)=>{
-      if(err){
-        return callback(err);
-      }
-      return callback(null, res);
-    });
-  });
-};
-
-const upsertNamedNode = (name, info, callback)=>{
-  const node = Object.assign({}, info, {name});
-  stores.collection('nodes', (err, collection)=>{
-    if(err){
-      return callback(err);
+    const insertNode = (node)=>{
+      collection.insert(node, (err, res)=>{
+        if(err){
+          return callback(err);
+        }
+        return callback(null, res);
+      });
+    };
+    if(node.version && (!node.derivation)){
+      const {
+        version,
+        ...derivationNode,
+      } = node;
+      return findNamedNode(derivationNode, (err, newDerivationNode)=>{
+        if(err){
+          return callback(err);
+        }
+        if(newDerivationNode){
+          return insertNode(Object.assign({}, node, {derivation: newDerivationNode.id}));
+        }
+        return collection.insert(derivationNode, (err, response)=>{
+          if(err){
+            return callback(err);
+          }
+          const parent = response[response.root];
+          io.broadcast('redux::dispatch', {
+            type: 'ADD_NODES',
+            nodes: [parent]
+          });
+          const newNode = Object.assign({}, node, {derivation: parent.id});
+          return insertNode(newNode);
+        });
+      });
     }
-    collection.find({name}, (err, res)=>{
-      if(err){
-        return callback(err);
-      }
-      if(res[res.root] && res[res.root].length){
-        return updateNode(res[res.root][0].id, node, callback);
-      }
-      return insertNode(node, callback);
-    });
+    return insertNode(node);
   });
 };
 
@@ -188,9 +457,6 @@ const insertNodes = (nodes, callback)=>{
       if(node.id){
         return updateNode(node.id, node, done);
       }
-      if(node.name){
-        return upsertNamedNode(node.name, node, done);
-      }
       insertNode(node, done);
     }, ()=>{
       io.broadcast('redux::dispatch', {
@@ -208,7 +474,7 @@ const insertNodes = (nodes, callback)=>{
 const getNodes = (req, reply)=>{
   stores.collection('nodes', (err, collection)=>{
     if(err){
-      return reply(err);
+      return errorReply(reply, err);
     }
     collection.list(req.query, (err, list)=>{
       return reply(err || list);
@@ -219,7 +485,7 @@ const getNodes = (req, reply)=>{
 const getNode = (req, reply)=>{
   stores.collection('nodes', (err, collection)=>{
     if(err){
-      return reply(err);
+      return errorReply(reply, err);
     }
     const id = req.params.id;
     collection.get(id, (err, res)=>{
@@ -232,7 +498,7 @@ const postNodes = (req, reply)=>{
   const nodes = Array.isArray(req.payload)?req.payload:[req.payload];
   insertNodes(nodes, (err, response)=>{
     if(err){
-      return reply(err);
+      return errorReply(reply, err);
     }
     return reply(response);
   });
@@ -241,7 +507,7 @@ const postNodes = (req, reply)=>{
 const putNamedNode = (req, reply)=>{
   const name = req.params.name;
   const node = req.payload;
-  upsertNamedNode(name, node, (err, res)=>{
+  insertNode(node, (err, res)=>{
     io.broadcast('redux::dispatch', {
       type: 'UPDATE_NODES',
       nodes: [res[res.root]]
@@ -265,7 +531,7 @@ const putNode = (req, reply)=>{
 const deleteNode = (req, reply)=>{
   stores.collection('nodes', (err, collection)=>{
     if(err){
-      return reply(err);
+      return errorReply(reply, err);
     }
     const id = req.params.id;
     collection.delete(id, (err, res)=>{
@@ -282,7 +548,7 @@ const deleteNode = (req, reply)=>{
 const getEdges = (req, reply)=>{
   stores.collection('edges', (err, collection)=>{
     if(err){
-      return reply(err);
+      return errorReply(reply, err);
     }
     collection.list(req.query, (err, list)=>{
       return reply(err || list);
@@ -293,7 +559,7 @@ const getEdges = (req, reply)=>{
 const getEdge = (req, reply)=>{
   stores.collection('edges', (err, collection)=>{
     if(err){
-      return reply(err);
+      return errorReply(reply, err);
     }
     const id = req.params.id;
     collection.get(id, (err, res)=>{
@@ -306,7 +572,7 @@ const postEdges = (req, reply)=>{
   const edges = Array.isArray(req.payload)?req.payload:[req.payload];
   insertEdges(edges, (err, response)=>{
     if(err){
-      return reply(err);
+      return errorReply(reply, err);
     }
     return reply(response);
   });
@@ -315,7 +581,7 @@ const postEdges = (req, reply)=>{
 const putEdge = (req, reply)=>{
   stores.collection('edges', (err, collection)=>{
     if(err){
-      return reply(err);
+      return errorReply(reply, err);
     }
     const id = req.params.id;
     const edge = req.payload;
@@ -332,7 +598,7 @@ const putEdge = (req, reply)=>{
 const deleteEdge = (req, reply)=>{
   stores.collection('edges', (err, collection)=>{
     if(err){
-      return reply(err);
+      return errorReply(reply, err);
     }
     const id = req.params.id;
     collection.delete(id, (err, res)=>{
@@ -346,6 +612,7 @@ const deleteEdge = (req, reply)=>{
 };
 
 module.exports = [
+  // Nodes
   {
     method: 'GET',
     path: '/api/graph/nodes',
@@ -362,9 +629,29 @@ module.exports = [
       validate: {
         params: {
           id: Joi.string(),
-        }
+        },
       },
       handler: getNode,
+    },
+  },
+  {
+    method: 'GET',
+    path: '/api/graph/nodes/{like}',
+    config: {
+      tags: ['api'],
+      validate: {
+        params: {
+          like: Joi.string(),
+        },
+      },
+      handler(req, reply){
+        return locateNodes(req.params.like, (err, list)=>{
+          if(err){
+            return errorReply(reply, err);
+          }
+          return reply(list);
+        });
+      },
     },
   },
   {
@@ -414,12 +701,13 @@ module.exports = [
       validate: {
         params: {
           id: Joi.string(),
-        }
+        },
       },
       handler: deleteNode,
     },
   },
 
+  // Edges
   {
     method: 'GET',
     path: '/api/graph/edges',
@@ -436,7 +724,7 @@ module.exports = [
       validate: {
         params: {
           id: Joi.string(),
-        }
+        },
       },
       handler: getEdge,
     },
@@ -474,9 +762,67 @@ module.exports = [
       validate: {
         params: {
           id: Joi.string(),
-        }
+        },
       },
       handler: deleteEdge,
+    },
+  },
+
+  // Aliases
+  {
+    method: 'GET',
+    path: '/api/graph/aliases',
+    config: {
+      tags: ['api'],
+      handler: (req, reply)=>listAliases(req.query, (err, response)=>responseReply(reply, err, response)),
+    },
+  },
+  {
+    method: 'GET',
+    path: '/api/graph/aliases/{like}',
+    config: {
+      tags: ['api'],
+      validate: {
+        params: {
+          like: Joi.string(),
+        },
+      },
+      handler: (req, reply)=>getAliases(req.params.like, req.query, (err, response)=>responseReply(reply, err, response)),
+    },
+  },
+  {
+    method: 'POST',
+    path: '/api/graph/aliases',
+    config: {
+      tags: ['api'],
+      validate: {
+        payload: Joi.object()
+      },
+      handler: (req, reply)=>ensureAlias(req.payload, (err, response)=>responseReply(reply, err, response)),
+    },
+  },
+  {
+    method: 'PUT',
+    path: '/api/graph/aliases',
+    config: {
+      tags: ['api'],
+      validate: {
+        payload: Joi.object()
+      },
+      handler: (req, reply)=>ensureAlias(req.payload, (err, response)=>responseReply(reply, err, response)),
+    },
+  },
+  {
+    method: 'DELETE',
+    path: '/api/graph/alias/{id}',
+    config: {
+      tags: ['api'],
+      validate: {
+        params: {
+          id: Joi.string(),
+        },
+      },
+      handler: (req, reply)=>deleteAlias(req.params.id, (err, response)=>responseReply(reply, err, response)),
     },
   },
 ];

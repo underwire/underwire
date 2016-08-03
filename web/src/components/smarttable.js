@@ -7,6 +7,12 @@ const {
 } = require('react-bootstrap');
 const reToken = /\$\{([^}]+)\}/gi;
 
+const replaceToken = (token, data)=>{
+  const options = token.split('|');
+  const key = options.find((key)=>typeof(data[key])!=='undefined');
+  return key?data[key]:undefined;
+};
+
 class Row extends React.Component{
   getActionHandler(options){
     const {
@@ -18,7 +24,7 @@ class Row extends React.Component{
     const isLink = (typeof(settings)==='string')||(!!settings.href);
     const extClass = settings.className||'default';
     if(isLink){
-      const href = ((typeof(settings)==='string')?settings:settings.href).replace(reToken, (full, token)=>data[token]);
+      const href = ((typeof(settings)==='string')?settings:settings.href).replace(reToken, (full, token)=>replaceToken(token, data));
       return <Link key={id} className={`btn btn-${extClass}`} to={href}>{caption}</Link>
     }
     const handler = typeof(settings)==='function'?settings:settings.handler;

@@ -6,7 +6,8 @@ const properCase = (str)=>str.replace(/\w\S*/g, function(txt){return txt.charAt(
 const lookupNode = (id)=>{
   const nodes = store.getState().nodes;
   const node = nodes.find((node)=>node.id === id);
-  return node || {name: '[Unknown]'};
+  const caption = node&&node.version?`${node.name} (v${node.version})`:node.name||'[Unknown]';
+  return Object.assign({}, node || {name: '[Unknown]'}, {caption});
 };
 
 module.exports = builder({
@@ -18,8 +19,8 @@ module.exports = builder({
       'Tags',
     ],
   rowmap: [
-      (row)=>lookupNode(row.from).name,
-      (row)=>lookupNode(row.to).name,
+      (row)=>lookupNode(row.from).caption,
+      (row)=>lookupNode(row.to).caption,
       (row)=>(row.tags||[]).map(properCase).join(', '),
     ],
   actions:{

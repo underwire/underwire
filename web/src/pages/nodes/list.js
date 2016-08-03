@@ -7,11 +7,13 @@ module.exports = builder({
   title: 'Nodes',
   headers: [
       'Name',
+      'Version',
       'Type',
       'Tags',
     ],
   rowmap: [
       (row)=>row.name,
+      (row)=>row.version,
       (row)=>properCase(row.shape || 'process'),
       (row)=>(row.tags||[]).map(properCase).join(', '),
     ],
@@ -20,6 +22,10 @@ module.exports = builder({
       Edit:{
         href: '/nodes/${id}/edit',
         className: 'warning'
+      },
+      'New Version':{
+        href: '/nodes/new/${derivation|id}',
+        className: 'primary'
       },
     },
 });

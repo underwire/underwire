@@ -26,17 +26,17 @@ const shapes = Object.keys(ProcessCanvas)
     .map((key)=>key.replace(/^draw/, ''));
 
 class EditEdge extends Component{
-  getEditForm(user){
+  getEditForm(edge){
     const {
       id = false,
-    } = user;
+    } = edge;
     const nodes = this.props.nodes.map((node)=>{
       return {
         id: node.id,
         caption: node.name,
       };
     });
-    const action = id&&user?'Edit':'Create';
+    const action = id&&edge?'Edit':'Create';
     const fields = [
       {
         caption: 'From:',
@@ -59,7 +59,7 @@ class EditEdge extends Component{
       <div className="container">
         <SmartForm
           fields={fields}
-          data={user}
+          data={edge}
           title={`${action} Edge`}
           ref="form"
           onUpdate={(data, callback)=>this.props.onSave(data, callback)}

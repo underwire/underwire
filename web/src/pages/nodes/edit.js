@@ -25,24 +25,35 @@ const shapes = Object.keys(ProcessCanvas)
     .map((key)=>key.replace(/^draw/, ''));
 
 class EditNode extends Component{
-  getEditForm(user){
+  getNode(id){
+    const nodes = this.props.nodes.filter((node)=>node.id===id);
+    return nodes[0];
+  }
+
+  getEditForm(node, derivation){
     const {
       id = false,
-    } = user;
-    const action = id&&user?'Edit':'Create';
+    } = node;
+    const action = id&&node?'Edit':'Create';
     const fields = [
       {
         caption: 'Name:',
         field: 'name',
         type: 'text',
+        defaultValue: derivation.name || node.name || '',
         required: true,
+      },
+      {
+        caption: 'Version:',
+        field: 'version',
+        type: 'text',
       },
       {
         caption: 'Shape:',
         field: 'shape',
         type: 'select',
         items: shapes,
-        default: 'Process',
+        default: derivation.shape||'Process',
       },
       {
         caption: 'Tags:',
@@ -56,11 +67,15 @@ class EditNode extends Component{
         type: 'labeledjsoneditor',
       },
     ];
+    const hiddenFields = {
+      derivation: derivation.id,
+    };
     return (
       <div className="container">
         <SmartForm
+          hidden={hiddenFields}
           fields={fields}
-          data={user}
+          data={node}
           title={`${action} Node`}
           ref="form"
           onUpdate={(data, callback)=>this.props.onSave(data, callback)}
@@ -73,9 +88,15 @@ class EditNode extends Component{
 
   render(){
     const id = this.props.id || false;
-    const nodes = this.props.nodes.filter((node)=>node.id===id);
-    const node = nodes.shift();
-    return node||(id===false)?this.getEditForm(node||{}):<span>Loading...</span>;
+    const node = this.getNode(id);
+    const {
+      derivation = false,
+    } = this.props;
+    const derivationNode = derivation?this.getNode(derivation):{};
+    if((derivation !== false) && (!derivationNode)){
+      return <span>Loading...</span>;
+    }
+    return node||(id===false)?this.getEditForm(node||{}, derivationNode):<span>Loading...</span>;
   }
 }
 
@@ -87,6 +108,7 @@ const mapStateToProps = (state, ownProps) => {
   return {
     id: ownProps.params.id,
     nodes: state.nodes,
+    derivation: ownProps.params.derivation,
   };
 };
 

@@ -26,10 +26,10 @@ class ShapeSelect extends React.Component{
   render(){
     return (
       <Select
+        {...this.props}
         ref="editor"
         items={shapes}
         value={this.props.value.toLowerCase()}
-        {...this.props}
         />
     );
   }

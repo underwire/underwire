@@ -8,6 +8,7 @@ const Select = require('./select');
 const LabeledSelect = require('./labeledselect');
 const LabeledCheckbox = require('./labeledcheckbox');
 const Checkbox = require('./checkbox');
+const ShapeSelect = require('./shapeselect');
 
 const NodeSelect = require('./nodeselect');
 const LabeledNodeSelect = require('./labelednodeselect');
@@ -91,6 +92,18 @@ Editors.register({
       ...other
     } = options;
     return <NodeSelect label={caption || `${field}:`} {...other} />
+  }
+});
+
+Editors.register({
+  type: 'shapeselect',
+  render(options){
+    const {
+      caption,
+      field,
+      ...other
+    } = options;
+    return <ShapeSelect label={caption || `${field}:`} {...other} />
   }
 });
 

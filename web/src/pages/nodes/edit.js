@@ -51,8 +51,8 @@ class EditNode extends Component{
       {
         caption: 'Shape:',
         field: 'shape',
-        type: 'select',
-        items: shapes,
+        type: 'shapeselect',
+        //items: shapes,
         default: derivation.shape||'Process',
       },
       {

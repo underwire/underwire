@@ -1,6 +1,6 @@
 {
   "name": "underwire",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Dependency tracking system",
   "main": "./bin/server",
   "scripts": {

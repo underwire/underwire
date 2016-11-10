@@ -1,6 +1,14 @@
 const builder = require('../../components/pages/listing');
+const {
+  processShapes,
+  properCase
+} = require('../../lib/utils');
 
-const properCase = (str)=>str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
+const getShape = (from)=>{
+  const fromLower = (from||'process').toLowerCase();
+  const matches = processShapes.filter((item)=>item.id === fromLower);
+  return matches[0]?matches[0].caption:'Process';
+};
 
 module.exports = builder({
   store: 'nodes',
@@ -14,7 +22,7 @@ module.exports = builder({
   rowmap: [
       (row)=>row.name,
       (row)=>row.version,
-      (row)=>properCase(row.shape || 'process'),
+      (row)=>getShape(row.shape),
       (row)=>(row.tags||[]).map(properCase).join(', '),
     ],
   actions:{
@@ -23,9 +31,11 @@ module.exports = builder({
         href: '/nodes/${id}/edit',
         className: 'warning'
       },
+      /*
       'New Version':{
         href: '/nodes/new/${derivation|id}',
         className: 'primary'
       },
+      */
     },
 });

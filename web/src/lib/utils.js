@@ -1,9 +1,32 @@
+const {
+  ProcessCanvas,
+} = require('../vendor/processcanvas/processCanvas');
+
 const moment = require('moment');
 
 const reTrue = /^(true|t|yes|y|1)$/i;
 const reFalse = /^(false|f|no|n|0)$/i;
 
 const noop = function(){};
+
+const properCase = (str)=>str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
+
+const drawIgnores = [
+  "drawLine", "drawRect", "drawRoundRect", "drawEllipse", "drawArc", "drawHorizontalConnection", "drawVerticalConnection", "drawConnectorEndpoint", "drawConnection"
+];
+
+const removeDupes = (elem, index, arr)=>arr.indexOf(elem)===index;
+
+const processShapes = Object.keys(ProcessCanvas)
+    .filter((key)=>/^draw/.exec(key)&&drawIgnores.indexOf(key)===-1)
+    .map((key)=>{
+      const shape = key.replace(/^draw/, '');
+      return {
+        id: shape.toLowerCase(),
+        shape,
+        caption: shape.replace(/([a-z])([A-Z])/g, (full, p, n)=>`${p} ${n}`),
+      };
+    });
 
 const encodeParams = (args)=>{
   let key, s=[], i, l;
@@ -167,4 +190,8 @@ module.exports = {
   upperFirstLetter,
   getTypedValueFrom,
   getJoiErrorText,
+  properCase,
+  drawIgnores,
+  processShapes,
+  removeDupes,
 };

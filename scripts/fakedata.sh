@@ -34,7 +34,7 @@ curl -X POST \
     http://localhost:8080/api/graph/edges \
     --data '[
       {
-        "from": "Test 1",
+        "from": "Item 1",
         "to": "Item 2"
       },
       {

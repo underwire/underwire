@@ -50,7 +50,8 @@ const buildCompareFunc = function(o){
 };
 
 class MemoryStore{
-  constructor(){
+  constructor(name){
+    this.name = name;
     this.data = [];
   }
 
@@ -74,7 +75,7 @@ class MemoryStore{
           root: 'response',
           response: records.slice()
         };
-      unlock(()=>callback(null, result));
+      return unlock(()=>callback(null, result));
     });
   }
 
@@ -86,7 +87,7 @@ class MemoryStore{
           root: 'response',
           response: records.slice()
         };
-      unlock(()=>callback(null, result));
+      return unlock(()=>callback(null, result));
     });
   }
 
@@ -94,7 +95,7 @@ class MemoryStore{
     lock(this, (unlock)=>{
       const {data} = this;
       const idx = sift.indexOf({id}, data);
-      unlock(()=>callback(null, {
+      return unlock(()=>callback(null, {
           root: 'record',
           record: idx>-1?data[idx]:undefined
         }));
@@ -105,7 +106,7 @@ class MemoryStore{
     lock(this, (unlock)=>{
       const rec = Object.assign({}, record, {id: uuid(), _created: new Date()});
       this.data.push(rec);
-      unlock(()=>callback(null, {
+      return unlock(()=>callback(null, {
           root: 'record',
           record: rec
         }));
@@ -117,7 +118,7 @@ class MemoryStore{
       const {data} = this;
       const idx = sift.indexOf({id}, data);
       if(idx === -1){
-        return callback(new Error(`No record with id of ${id} could be found.`));
+        return unlock(()=>callback(new Error(`No record with id of ${id} could be found.`)));
       }
       const rec = Object.assign({}, record, {
         id,
@@ -125,7 +126,7 @@ class MemoryStore{
         _updated: new Date()
       });
       data[idx] = rec;
-      unlock(()=>callback(null, {
+      return unlock(()=>callback(null, {
           root: 'record',
           record: rec
         }));
@@ -140,7 +141,7 @@ class MemoryStore{
         return unlock(()=>callback(null, 0));
       }
       this.data = [...data.slice(0, idx), ...data.slice(idx+1, data.length)];
-      unlock(()=>callback(null, 1));
+      return unlock(()=>callback(null, 1));
     });
   }
 };

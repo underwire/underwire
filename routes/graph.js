@@ -2,6 +2,9 @@ const stores = require('../lib/stores');
 const Joi = require('joi');
 const async = require('async');
 const io = require('../lib/io');
+const {
+  exclude
+} = require('../lib/utils');
 
 const errorReply = (reply, err)=>{
   if(err instanceof Error){
@@ -60,7 +63,7 @@ const locateNodes = (criteria, callback)=>{
         }
         const nodes = list[list.root];
         if((!nodes)||(nodes.length===0)){
-          return callback(new Error(`Could not locate from node using ${criteria}`));
+          return callback(new Error(`Could not locate node using "${criteria}"`));
         }
         callback(null, list);
       });
@@ -282,23 +285,23 @@ const ensureEdge = (edge, callback)=>{
       if(err){
         return callback(err);
       }
-      locateNode(edge.from, (err, node)=>{
+      ensureNode(edge.from, (err, node)=>{
         if(err){
           return callback(err);
         }
-        const from = node[node.root];
+        const from = node[node.root] || node;
         if(!from){
-          return callback(new Error(`Could not locate from node using ${edge.from}`));
+          return callback(new Error(`Could not locate node using "${edge.from}"`));
         }
 
-        locateNode(edge.to, (err, node)=>{
+        ensureNode(edge.to, (err, node)=>{
           if(err){
             return callback(err);
           }
-          const to = node[node.root];
+          const to = node[node.root] || node;
           return callback(null, Object.assign({}, edge, {
-              from: from.id,
-              to: to.id,
+              from: from.id||from._id,
+              to: to.id||to._id,
               ...getRest()
             }));
         });
@@ -307,14 +310,28 @@ const ensureEdge = (edge, callback)=>{
   });
 };
 
-const insertEdge = (edge, callback)=>{
+const _insertEdge = (edge, callback)=>{
   stores.collection('edges', (err, edges)=>{
     if(err){
       return callback(err);
     }
-    ensureEdge(edge, (err, realEdge)=>{
-      edges.insert(edge, callback);
+    edges.insert(edge, (err, res)=>{
+      if(err){
+        return callback(err);
+      }
+      const edge = res[res.root] || res || realEdge;
+      io.broadcast('redux::dispatch', {
+        type: 'ADD_EDGES',
+        edges: [edge]
+      });
+      return callback(null, res);
     });
+  });
+};
+
+const insertEdge = (edge, callback)=>{
+  ensureEdge(edge, (err, realEdge)=>{
+    _insertEdge(realEdge, callback);
   });
 };
 
@@ -335,7 +352,7 @@ const upsertEdge = (edge, callback)=>{
         if(existing){
           return edges.update(existing.id, realEdge, callback);
         }
-        return edges.insert(realEdge, callback);
+        _insertEdge(realEdge, callback);
       });
     });
   });
@@ -372,12 +389,61 @@ const insertEdges = (edges, callback)=>{
   });
 };
 
-const updateNode = (id, node, callback)=>{
+const ensureNodeEdges = (node, edges, callback)=>{
+  if(edges && edges.length){
+    const _edges = [];
+    return async.each(edges, (edge, next)=>{
+      upsertEdge({
+        from: node,
+        to: edge
+      }, (err, edg)=>{
+        if(err){
+          _edges.push({
+            from: node.name,
+            to: edge,
+            error: err.toString()
+          });
+          return next();
+        }
+        _edges.push(edg[edg.root || edg]);
+        return next();
+      });
+    }, ()=>{
+      return callback(null, {
+        root: 'response',
+        response: {
+          node,
+          edges: _edges
+        }
+      });
+    });
+  }
+  return callback(null, {root: 'node', node});
+};
+
+const updateNode = (id, source, callback)=>{
   stores.collection('nodes', (err, collection)=>{
     if(err){
       return callback(err);
     }
-    collection.update(id, node, callback);
+    const node = exclude(source, 'edges', 'aliases');
+    const edges = source.edges || [];
+    const aliases = source.aliases || [];
+    collection.update(id, node, (err, res)=>{
+      if(err){
+        return callback(err);
+      }
+      if(aliases && aliases.length){
+        return async.each(aliases, (definition, next)=>{
+          ensureAlias({definition, nodes: [node]}, ()=>next());
+        }, ()=>{
+          return ensureNodeEdges(node, edges, (err, res)=>{
+            return callback(err, res);
+          });
+        });
+      }
+      return ensureNodeEdges(node, edges, callback);
+    });
   });
 };
 
@@ -404,12 +470,27 @@ const insertNode = (node, callback)=>{
     if(err){
       return callback(err);
     }
-    const insertNode = (node)=>{
+    const insertNode = (source)=>{
+      const node = exclude(source, 'edges', 'aliases');
+      const edges = source.edges || [];
+      const aliases = source.aliases || [];
       collection.insert(node, (err, res)=>{
         if(err){
           return callback(err);
         }
-        return callback(null, res);
+        const n = res[res.root] || res || node;
+        io.broadcast('redux::dispatch', {
+          type: 'ADD_NODES',
+          nodes: [n]
+        });
+        if(aliases && aliases.length){
+          return async.each(aliases, (definition, next)=>{
+            ensureAlias({definition, nodes: [n]}, ()=>next());
+          }, ()=>{
+            return ensureNodeEdges(n, edges, callback);
+          });
+        }
+        return ensureNodeEdges(n, edges, callback);
       });
     };
     if(node.version && (!node.derivation)){
@@ -442,8 +523,38 @@ const insertNode = (node, callback)=>{
   });
 };
 
+const upsertNode = (node, callback)=>{
+  const nodeId = node.id || node._id;
+  if(nodeId){
+    return updateNode(nodeId, node, callback);
+  }
+  stores.collection('nodes', (err, collection)=>{
+    locateNode({name: node.name}, (err, res)=>{
+      if(err){
+        if(err.toString().match('Could not locate node')){
+          return insertNode(node, callback);
+        }
+        return callback(err);
+      }
+      const existingNode = res[res.root]||res;
+      return updateNode(existingNode.id||existingNode._id, node, callback);
+    });
+  });
+};
+
+const ensureNode = (criteria, callback)=>{
+  locateNode(criteria, (err, found)=>{
+    if(found){
+      return callback(null, found);
+    }
+    const node = typeof(criteria)==='string'?{name: criteria}:criteria;
+    insertNode(node, callback);
+  });
+};
+
 const insertNodes = (nodes, callback)=>{
   let inserted = [];
+  let edges = [];
   let errors = [];
   async.each(nodes, (node, next)=>{
       const done = (err, res)=>{
@@ -451,18 +562,15 @@ const insertNodes = (nodes, callback)=>{
           errors.push({error: err, node})
           return next();
         }
-        inserted.push(res[res.root]);
+        const n = res[res.root];
+        inserted.push(n.node?n.node:n);
+        if(n.edges){
+          edges = edges.concat(n.edges);
+        }
         return next();
       };
-      if(node.id){
-        return updateNode(node.id, node, done);
-      }
-      insertNode(node, done);
+      upsertNode(node, done);
     }, ()=>{
-      io.broadcast('redux::dispatch', {
-        type: 'ADD_NODES',
-        nodes: inserted
-      });
       return callback(null, {
         root: 'inserted',
         inserted,

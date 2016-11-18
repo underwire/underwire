@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node ./bin/server",
     "dev": "nodemon ./bin/serverdev --hot",
+    "dev-no-ui": "nodemon ./bin/serverdev",
     "test": "lab --transform ./test/setup.js --ignore 'Reflect,core,_babelPolyfill,regeneratorRuntime,__core-js_shared__'",
     "compile-ui": "NODE_ENV=production rm -rf web/site/; webpack --colors --display-error-details --config configs/webpack.client.js",
     "compile": "npm run compile-ui",

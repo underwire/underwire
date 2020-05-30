@@ -4,3 +4,4 @@ coverage/
 test.sh
 npm-debug.log
 web/site/
+yarn.lock
